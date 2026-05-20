@@ -255,16 +255,14 @@
 
         const targetImage = document.getElementById(`img-${pkmn.id}`);
 
-        if (cardImageCache[pkmn.id]) {
-            targetImage.src = cardImageCache[pkmn.id];
-        } else {
-            let apiQueryUrl = `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id}`;
-            
-            if (pkmn.other) {
+            if (cardImageCache[pkmn.id]) {
+                targetImage.src = cardImageCache[pkmn.id];
+            }
+            else if (pkmn.other) {
                 const targetImage = document.getElementById(`img-${pkmn.id}`);
                 targetImage.src = pkmn.image;
             } else {
-                apiQueryUrl = `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id} (rarity:"Illustration Rare" OR rarity:"Special Illustration Rare" OR rarity:"Promo" OR rarity:"Rare Secret" OR rarity:"Rare Shiny" OR rarity:"Rare Holo LV.X" OR rarity:"Rare Prime")`;
+                let apiQueryUrl = `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id} (rarity:"Illustration Rare" OR rarity:"Special Illustration Rare" OR rarity:"Promo" OR rarity:"Rare Secret" OR rarity:"Rare Shiny" OR rarity:"Rare Holo LV.X" OR rarity:"Rare Prime")`;
             }
 
             fetch(apiQueryUrl)
