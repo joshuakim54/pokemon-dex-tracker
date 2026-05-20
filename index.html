@@ -41,7 +41,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px; /* Clean, uniform spacing between blocks */
+            gap: 12px;
         }
         
         /* Base structural rules shared by both elements for perfect sizing */
@@ -49,12 +49,12 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            height: 44px; /* Explicit matching height barrier */
-            padding: 0 24px; /* Identical internal horizontal padding */
+            height: 44px;
+            padding: 0 24px;
             font-size: 0.95rem;
             font-weight: 600;
-            border-radius: 8px; /* Matching smooth corner clipping radius */
-            box-sizing: border-box; /* Forces padding inside the height boundary */
+            border-radius: 8px;
+            box-sizing: border-box;
         }
         
         /* Custom coloring unique to the Counter Banner */
@@ -62,17 +62,16 @@
             background-color: #1e293b;
             color: #38bdf8;
             border: 1px solid #334155;
-            gap: 15px;
         }
 
         .counter-banner span {
             color: #fff;
-            font-weight: normal;
+            margin-left: 6px;
         }
         
         /* Custom coloring unique to the Action Button */
         .clear-btn {
-            background-color: #ef4444; /* Vivid warning red */
+            background-color: #ef4444;
             color: #ffffff;
             border: 1px solid #dc2626;
             cursor: pointer;
@@ -80,11 +79,11 @@
         }
         
         .clear-btn:hover {
-            background-color: #dc2626; /* Darkens smoothly on hover */
+            background-color: #dc2626;
         }
         
         .clear-btn:active {
-            transform: scale(0.97); /* Physical compression click response */
+            transform: scale(0.97);
         }
         
         /* 3x3 Binder Layout Sheet */
@@ -111,7 +110,7 @@
             align-items: center;
             justify-content: space-between;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            min-height: 380px;
+            min-height: 360px;
         }
         .card-info {
             font-size: 0.85rem;
@@ -130,20 +129,14 @@
             margin-bottom: 12px;
         }
 
-        /* Language Toggle Button Containers */
-        .lang-group {
-            display: flex;
-            gap: 8px;
+        /* Simplified Clean Owned Button */
+        .owned-btn {
             width: 100%;
-        }
-
-        .lang-btn {
-            flex: 1;
             background-color: #0f172a;
             color: #64748b;
             border: 1px solid #334155;
-            padding: 6px 0;
-            font-size: 0.8rem;
+            padding: 8px 0;
+            font-size: 0.85rem;
             font-weight: 700;
             border-radius: 6px;
             cursor: pointer;
@@ -151,20 +144,13 @@
             transition: all 0.2s ease;
         }
 
-        .lang-btn:hover {
+        .owned-btn:hover {
             color: #f8fafc;
             border-color: #475569;
         }
 
-        /* Active Selected Button States */
-        .lang-btn.active-eng {
-            background-color: #10b981; /* Solid Emerald Green */
-            color: #ffffff;
-            border-color: #059669;
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
-        }
-
-        .lang-btn.active-jpn {
+        /* Active Owned Button State */
+        .owned-btn.active {
             background-color: #10b981; /* Solid Emerald Green */
             color: #ffffff;
             border-color: #059669;
@@ -202,12 +188,9 @@
         <h1>Sinnoh Master Binder</h1>
         <p class="subtitle">An automated layout tracker managing all 107 native Generation 4 species.</p>
         
-        <!-- Unified Dashboard Row -->
         <div class="dashboard-row">
             <div class="counter-banner">
-                <div>ENG: <span id="engCount">0</span>/107</div>
-                <div>|</div>
-                <div>JPN: <span id="jpnCount">0</span>/107</div>
+                Progress: <span id="progressCount">0</span> / 107
             </div>
             <button onclick="clearAllProgress()" class="clear-btn">
                 Clear Progress
@@ -215,7 +198,6 @@
         </div>
     </header>
 
-    <!-- The target wrapper for the loop output -->
     <div class="binder-grid" id="binderContainer"></div>
 
     <script>
@@ -259,132 +241,99 @@
         {"id": 492, "name": "Shaymin"}, {"id": 493, "name": "Arceus"}
     ];
 
-    let savedCollection = JSON.parse(localStorage.getItem('tcgdex_sinnoh_lang_tracker')) || {};
-    let cardImageCache = JSON.parse(localStorage.getItem('tcgdex_sinnoh_images')) || {};
+    let savedCollection = JSON.parse(localStorage.getItem('clean_sinnoh_tracker')) || {};
+    let cardImageCache = JSON.parse(localStorage.getItem('clean_sinnoh_images')) || {};
     
     const container = document.getElementById('binderContainer');
     container.innerHTML = '';
 
     pokemonData.forEach(pkmn => {
-        if (!savedCollection[pkmn.id]) {
-            savedCollection[pkmn.id] = { eng: false, jpn: false, activeView: 'eng' };
+        if (savedCollection[pkmn.id] === undefined) {
+            savedCollection[pkmn.id] = false;
         }
 
-        const status = savedCollection[pkmn.id];
-        const isOwned = status.eng || status.jpn;
+        const isOwned = savedCollection[pkmn.id];
 
         const pocket = document.createElement('div');
         pocket.className = isOwned ? 'card-pocket owned' : 'card-pocket';
         pocket.id = `pocket-${pkmn.id}`;
 
-        // Global fallback if API is slow or missing image asset
         const defaultMediaArt = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pkmn.id}.png`;
 
         pocket.innerHTML = `
             <div class="card-info">#${pkmn.id} - ${pkmn.name}</div>
             <img src="${defaultMediaArt}" alt="${pkmn.name}" class="card-image" id="img-${pkmn.id}" loading="lazy">
-            <div class="lang-group">
-                <button onclick="toggleLanguage(${pkmn.id}, 'eng')" id="btn-eng-${pkmn.id}" class="lang-btn ${status.eng ? 'active-eng' : ''}">ENG</button>
-                <button onclick="toggleLanguage(${pkmn.id}, 'jpn')" id="btn-jpn-${pkmn.id}" class="lang-btn ${status.jpn ? 'active-jpn' : ''}">JPN</button>
-            </div>
+            <button onclick="toggleOwned(${pkmn.id})" id="btn-${pkmn.id}" class="owned-btn ${isOwned ? 'active' : ''}">
+                ${isOwned ? 'Owned' : 'Mark Owned'}
+            </button>
         `;
         container.appendChild(pocket);
 
         const targetImage = document.getElementById(`img-${pkmn.id}`);
 
-        // Check if urls are cached already
         if (cardImageCache[pkmn.id]) {
-            targetImage.src = cardImageCache[pkmn.id][status.activeView] || defaultMediaArt;
+            targetImage.src = cardImageCache[pkmn.id];
         } else {
-            // Fetch clean data endpoints from TCGdex multi-language database
-            const englishFetch = fetch(`https://api.tcgdex.net/v2/en/pokemon/${pkmn.name.toLowerCase()}`).then(res => res.json()).catch(() => null);
-            const japaneseFetch = fetch(`https://api.tcgdex.net/v2/ja/pokemon/${pkmn.name.toLowerCase()}`).then(res => res.json()).catch(() => null);
-
-            Promise.all([englishFetch, japaneseFetch]).then(([engData, jpnData]) => {
-                let engUrl = defaultMediaArt;
-                let jpnUrl = defaultMediaArt;
-
-                // Safely grab the latest printed card release for English database
-                if (engData && engData.cards && engData.cards.length > 0) {
-                    const latestCard = engData.cards[engData.cards.length - 1];
-                    if (latestCard.image) engUrl = `${latestCard.image}/high.webp`;
-                }
-
-                // Safely grab the latest printed card release for Japanese database
-                if (jpnData && jpnData.cards && jpnData.cards.length > 0) {
-                    const latestCard = jpnData.cards[jpnData.cards.length - 1];
-                    if (latestCard.image) jpnUrl = `${latestCard.image}/high.webp`;
-                }
-
-                // Cache both language image URLs to LocalStorage
-                cardImageCache[pkmn.id] = { eng: engUrl, jpn: jpnUrl };
-                localStorage.setItem('tcgdex_sinnoh_images', JSON.stringify(cardImageCache));
-
-                // Display whichever view state is actively selected
-                targetImage.src = cardImageCache[pkmn.id][status.activeView] || defaultMediaArt;
-            }).catch(err => {
-                console.error("Error setting up TCGdex multi-lang images:", err);
-                targetImage.src = defaultMediaArt;
-            });
+            // Straightforward, single-language check to TCGdex API
+            fetch(`https://api.tcgdex.net/v2/en/pokemon/${pkmn.name.toLowerCase()}`)
+                .then(res => res.json())
+                .then(engData => {
+                    let cardUrl = defaultMediaArt;
+                    if (engData && engData.cards && engData.cards.length > 0) {
+                        const latestCard = engData.cards[engData.cards.length - 1];
+                        if (latestCard.image) cardUrl = `${latestCard.image}/high.webp`;
+                    }
+                    cardImageCache[pkmn.id] = cardUrl;
+                    localStorage.setItem('clean_sinnoh_images', JSON.stringify(cardImageCache));
+                    targetImage.src = cardUrl;
+                })
+                .catch(err => {
+                    console.error(`Error loading image for ${pkmn.name}:`, err);
+                    targetImage.src = defaultMediaArt;
+                });
         }
     });
 
-    function toggleLanguage(id, lang) {
+    function toggleOwned(id) {
         const pocketElement = document.getElementById(`pocket-${id}`);
-        const targetImage = document.getElementById(`img-${id}`);
-        const btn = document.getElementById(`btn-${lang}-${id}`);
+        const btn = document.getElementById(`btn-${id}`);
         
-        savedCollection[id][lang] = !savedCollection[id][lang];
-        savedCollection[id].activeView = lang;
+        savedCollection[id] = !savedCollection[id];
 
-        if (savedCollection[id][lang]) {
-            btn.classList.add(`active-${lang}`);
-        } else {
-            btn.classList.remove(`active-${lang}`);
-        }
-
-        const fallback = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
-        if (cardImageCache[id]) {
-            targetImage.src = cardImageCache[id][lang] || fallback;
-        }
-
-        if (savedCollection[id].eng || savedCollection[id].jpn) {
+        if (savedCollection[id]) {
+            btn.classList.add('active');
+            btn.innerText = 'Owned';
             pocketElement.classList.add('owned');
         } else {
+            btn.classList.remove('active');
+            btn.innerText = 'Mark Owned';
             pocketElement.classList.remove('owned');
         }
 
-        localStorage.setItem('tcgdex_sinnoh_lang_tracker', JSON.stringify(savedCollection));
+        localStorage.setItem('clean_sinnoh_tracker', JSON.stringify(savedCollection));
         updateMetrics();
     }
 
     function clearAllProgress() {
-        if (confirm("Are you sure you want to reset your binder? This will uncheck cards and clear image data!")) {
+        if (confirm("Are you sure you want to reset your binder progress?")) {
             savedCollection = {};
-            cardImageCache = {};
-            localStorage.removeItem('tcgdex_sinnoh_lang_tracker');
-            localStorage.removeItem('tcgdex_sinnoh_images');
+            localStorage.removeItem('clean_sinnoh_tracker');
             
-            container.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.classList.remove('active-eng', 'active-jpn');
+            container.querySelectorAll('.owned-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.innerText = 'Mark Owned';
             });
             container.querySelectorAll('.card-pocket').forEach(pocket => pocket.classList.remove('owned'));
             updateMetrics();
-            location.reload();
         }
     }
 
     function updateMetrics() {
-        let engTotal = 0;
-        let jpnTotal = 0;
-
+        let totalOwned = 0;
         Object.keys(savedCollection).forEach(key => {
-            if (savedCollection[key].eng) engTotal++;
-            if (savedCollection[key].jpn) jpnTotal++;
+            if (savedCollection[key]) totalOwned++;
         });
-
-        document.getElementById('engCount').innerText = engTotal;
-        document.getElementById('jpnCount').innerText = jpnTotal;
+        document.getElementById('progressCount').innerText = totalOwned;
     }
     updateMetrics();
 </script>
