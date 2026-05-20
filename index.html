@@ -231,7 +231,7 @@
         {"id": 408, "name": "Cranidos"}, {"id": 409, "name": "Rampardos"}, {"id": 410, "name": "Shieldon"},
         {"id": 411, "name": "Bastiodon"}, {"id": 412, "name": "Burmy"}, {"id": 413, "name": "Wormadam"},
         {"id": 414, "name": "Mothim"}, {"id": 415, "name": "Combee"}, {"id": 416, "name": "Vespiquen"},
-        {"id": 417, "name": "Pachirisu"}, {"id": 418, "name": "Buizel"}, {"id": 419, "value": "Floatzel"},
+        {"id": 417, "name": "Pachirisu"}, {"id": 418, "name": "Buizel"}, {"id": 419, "name": "Floatzel"},
         {"id": 420, "name": "Cherubi"}, {"id": 421, "name": "Cherrim"}, {"id": 422, "name": "Shellos"},
         {"id": 423, "name": "Gastrodon"}, {"id": 424, "name": "Ambipom"}, {"id": 425, "name": "Drifloon"},
         {"id": 426, "name": "Drifblim"}, {"id": 427, "name": "Buneary"}, {"id": 428, "name": "Lopunny"},
@@ -259,7 +259,6 @@
         {"id": 492, "name": "Shaymin"}, {"id": 493, "name": "Arceus"}
     ];
 
-    // Storage architecture: savedCollection now retains language maps { 387: { eng: true, jpn: false } }
     let savedCollection = JSON.parse(localStorage.getItem('sinnoh_binder_lang_tracker')) || {};
     let cardImageCache = JSON.parse(localStorage.getItem('sinnoh_card_images')) || {};
     
@@ -267,9 +266,12 @@
     container.innerHTML = '';
 
     pokemonData.forEach(pkmn => {
-        // Fallback layout protection for missing entries
         if (!savedCollection[pkmn.id]) {
-            savedCollection[pkmn.id] = { eng: false, jpn: false };
+            savedCollection[pkmn.id] = { eng: false, jpn: false, activeView: 'eng' };
+        }
+        // Migration patch to make sure old save structures don't break tracking view states
+        if (!savedCollection[pkmn.id].activeView) {
+            savedCollection[pkmn.id].activeView = 'eng';
         }
 
         const status = savedCollection[pkmn.id];
@@ -279,11 +281,12 @@
         pocket.className = isOwned ? 'card-pocket owned' : 'card-pocket';
         pocket.id = `pocket-${pkmn.id}`;
 
-        const placeholderImg = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pkmn.id}.png`;
+        // Default placeholder fallback
+        const jpnArtUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pkmn.id}.png`;
 
         pocket.innerHTML = `
             <div class="card-info">#${pkmn.id} - ${pkmn.name}</div>
-            <img src="${placeholderImg}" alt="${pkmn.name}" class="card-image" id="img-${pkmn.id}" loading="lazy">
+            <img src="${jpnArtUrl}" alt="${pkmn.name}" class="card-image" id="img-${pkmn.id}" loading="lazy">
             <div class="lang-group">
                 <button onclick="toggleLanguage(${pkmn.id}, 'eng')" id="btn-eng-${pkmn.id}" class="lang-btn ${status.eng ? 'active-eng' : ''}">ENG</button>
                 <button onclick="toggleLanguage(${pkmn.id}, 'jpn')" id="btn-jpn-${pkmn.id}" class="lang-btn ${status.jpn ? 'active-jpn' : ''}">JPN</button>
@@ -293,8 +296,10 @@
 
         const targetImage = document.getElementById(`img-${pkmn.id}`);
 
+        // Async Image Fetch Orchestration
         if (cardImageCache[pkmn.id]) {
-            targetImage.src = cardImageCache[pkmn.id];
+            // Apply image selection depending on saved user toggle preference
+            targetImage.src = status.activeView === 'jpn' ? jpnArtUrl : cardImageCache[pkmn.id];
         } else {
             let apiQueryUrl = `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id} (rarity:"Illustration Rare" OR rarity:"Special Illustration Rare" OR rarity:"Promo" OR rarity:"Rare Secret" OR rarity:"Rare Shiny" OR rarity:"Rare Holo LV.X" OR rarity:"Rare Prime")`;
 
@@ -303,16 +308,16 @@
                 .then(data => {
                     if (data.data && data.data.length > 0) {
                         const imgUrl = data.data[0].images.large;
-                        targetImage.src = imgUrl;
                         saveImageToCache(pkmn.id, imgUrl);
+                        if (status.activeView === 'eng') targetImage.src = imgUrl;
                     } else {
                         fetch(`https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id}`)
                             .then(res => res.json())
                             .then(fallbackData => {
                                 if (fallbackData.data && fallbackData.data.length > 0) {
                                     const newestCard = fallbackData.data[fallbackData.data.length - 1];
-                                    targetImage.src = newestCard.images.large;
                                     saveImageToCache(pkmn.id, newestCard.images.large);
+                                    if (status.activeView === 'eng') targetImage.src = newestCard.images.large;
                                 }
                             });
                     }
@@ -328,19 +333,33 @@
 
     function toggleLanguage(id, lang) {
         const pocketElement = document.getElementById(`pocket-${id}`);
+        const targetImage = document.getElementById(`img-${id}`);
         const btn = document.getElementById(`btn-${lang}-${id}`);
         
-        // Toggle the true/false value
+        // 1. Toggle the target selection boolean data map
         savedCollection[id][lang] = !savedCollection[id][lang];
         
-        // Update button active style classes
+        // 2. Set the active view layout memory target based on what button was clicked
+        savedCollection[id].activeView = lang;
+
+        // Update button active style classes visually
         if (savedCollection[id][lang]) {
             btn.classList.add(`active-${lang}`);
         } else {
             btn.classList.remove(`active-${lang}`);
         }
 
-        // Update overall card card slot highlights based on ownership logic
+        // 3. Swap Card Artwork Sources dynamically on click
+        const nativeJpnArt = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+        const cachedEngCard = cardImageCache[id] || nativeJpnArt;
+
+        if (savedCollection[id].activeView === 'jpn') {
+            targetImage.src = nativeJpnArt;
+        } else {
+            targetImage.src = cachedEngCard;
+        }
+
+        // Update overall pocket dark/lit color themes based on ownership logic
         if (savedCollection[id].eng || savedCollection[id].jpn) {
             pocketElement.classList.add('owned');
         } else {
@@ -358,7 +377,6 @@
             localStorage.removeItem('sinnoh_binder_lang_tracker');
             localStorage.removeItem('sinnoh_card_images');
             
-            // Clean up button active styling states on screen
             container.querySelectorAll('.lang-btn').forEach(btn => {
                 btn.classList.remove('active-eng', 'active-jpn');
             });
