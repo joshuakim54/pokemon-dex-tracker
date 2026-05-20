@@ -124,6 +124,25 @@
         @media (max-width: 500px) {
             .binder-grid { grid-template-columns: 1fr; }
         }
+        .clear-btn {
+            background-color: #ef4444; /* Crisp warning red */
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+        
+        .clear-btn:hover {
+            background-color: #dc2626; /* Darker red on hover */
+        }
+        
+        .clear-btn:active {
+            transform: scale(0.95); /* Subtle press effect when clicked */
+        }
     </style>
 </head>
 <body>
