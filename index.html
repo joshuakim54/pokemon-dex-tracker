@@ -165,7 +165,6 @@
 
    <script>
     // 1. Master Sinnoh list
-    // You can hardcode exact card overrides like Turtwig MEP 040 right here!
     const pokemonData = [
         {"id": 387, "name": "Turtwig", "set": "mep", "cardNum": "040"}, 
         {"id": 388, "name": "Grotle"}, {"id": 389, "name": "Torterra"},
@@ -206,7 +205,10 @@
         {"id": 492, "name": "Shaymin"}, {"id": 493, "name": "Arceus"}
     ];
 
+    // 2. Persistent storage caches: one for checklist checks, one for saving found image paths
     let savedCollection = JSON.parse(localStorage.getItem('sinnoh_binder_tracker')) || {};
+    let cardImageCache = JSON.parse(localStorage.getItem('sinnoh_card_images')) || {};
+    
     const container = document.getElementById('binderContainer');
     container.innerHTML = '';
 
@@ -217,7 +219,7 @@
         pocket.className = isOwned ? 'card-pocket owned' : 'card-pocket';
         pocket.id = `pocket-${pkmn.id}`;
 
-        // Standardized placeholder asset sheet layout while background api works
+        // Initial setup image fallback path
         const placeholderImg = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pkmn.id}.png`;
 
         pocket.innerHTML = `
@@ -230,42 +232,51 @@
         `;
         container.appendChild(pocket);
 
-        // ART-HUNTER QUERY ARCHITECTURE:
-        // First checks if you forced a hardcoded override. Otherwise, queries the database
-        // specifically searching for Illustration Rares or Special Illustration Rares first!
-        let apiQueryUrl = `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id}`;
-        
-        if (pkmn.set && pkmn.cardNum) {
-            apiQueryUrl = `https://api.pokemontcg.io/v2/cards?q=set.id:${pkmn.set} number:${pkmn.cardNum}`;
-        } else {
-            // Searches for the national Pokedex ID AND looks for an Illustration Rare variant text flag
-            apiQueryUrl = `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id} (rarity:"Illustration Rare" OR rarity:"Special Illustration Rare")`;
-        }
+        const targetImage = document.getElementById(`img-${pkmn.id}`);
 
-        fetch(apiQueryUrl)
-            .then(res => res.json())
-            .then(data => {
-                const targetImage = document.getElementById(`img-${pkmn.id}`);
-                
-                if (data.data && data.data.length > 0) {
-                    // Perfect! Found an Illustration Rare print.
-                    targetImage.src = data.data[0].images.large;
-                } else if (!pkmn.set) {
-                    // Fallback Routine: If no Illustration variant exists for this specific Sinnoh species,
-                    // run a second rapid request to fetch its absolute latest standard print variant card layout.
-                    fetch(`https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id}`)
-                        .then(res => res.json())
-                        .then(fallbackData => {
-                            if (fallbackData.data && fallbackData.data.length > 0) {
-                                // Find the newest modern card layout available by picking the last entry in array
-                                const newestCard = fallbackData.data[fallbackData.data.length - 1];
-                                targetImage.src = newestCard.images.large;
-                            }
-                        });
-                }
-            })
-            .catch(err => console.error(`Error sorting art mapping for ID ${pkmn.id}:`, err));
+        // THE CACHE CHECK: If we already searched for this card before, load it instantly from memory!
+        if (cardImageCache[pkmn.id]) {
+            targetImage.src = cardImageCache[pkmn.id];
+        } else {
+            // No cache found? Run the API hunt *one time* and save the results permanently
+            let apiQueryUrl = `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id}`;
+            
+            if (pkmn.set && pkmn.cardNum) {
+                apiQueryUrl = `https://api.pokemontcg.io/v2/cards?q=set.id:${pkmn.set} number:${pkmn.cardNum}`;
+            } else {
+                apiQueryUrl = `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id} (rarity:"Illustration Rare" OR rarity:"Special Illustration Rare")`;
+            }
+
+            fetch(apiQueryUrl)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.data && data.data.length > 0) {
+                        const imgUrl = data.data[0].images.large;
+                        targetImage.src = imgUrl;
+                        // Commit to local database map
+                        saveImageToCache(pkmn.id, imgUrl);
+                    } else if (!pkmn.set) {
+                        // Regular print fallback route
+                        fetch(`https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id}`)
+                            .then(res => res.json())
+                            .then(fallbackData => {
+                                if (fallbackData.data && fallbackData.data.length > 0) {
+                                    const newestCard = fallbackData.data[fallbackData.data.length - 1];
+                                    targetImage.src = newestCard.images.large;
+                                    saveImageToCache(pkmn.id, newestCard.images.large);
+                                }
+                            });
+                    }
+                })
+                .catch(err => console.error(`Error sorting art mapping for ID ${pkmn.id}:`, err));
+        }
     });
+
+    // Helper to lock down the fetched URL to local storage memory
+    function saveImageToCache(id, url) {
+        cardImageCache[id] = url;
+        localStorage.setItem('sinnoh_card_images', JSON.stringify(cardImageCache));
+    }
 
     function toggleCard(id, checkbox) {
         const pocketElement = document.getElementById(`pocket-${id}`);
@@ -288,6 +299,12 @@
             container.querySelectorAll('.card-pocket').forEach(pocket => pocket.classList.remove('owned'));
             updateMetrics();
         }
+    }
+
+    // (Optional utility) In case you ever want to force-wipe the image cache and look for new cards
+    function clearImageCache() {
+        localStorage.removeItem('sinnoh_card_images');
+        location.reload();
     }
 
     function updateMetrics() {
