@@ -110,26 +110,24 @@
                 saveImageToCache(pkmn.id, pkmn.image);
             } else {
                 fetch(`https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id} (rarity:"Illustration Rare" OR rarity:"Special Illustration Rare" OR rarity:"Promo" OR rarity:"Rare Secret" OR rarity:"Rare Shiny" OR rarity:"Rare Holo LV.X" OR rarity:"Rare Prime" OR subtype:"VSTAR")`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.data?.length > 0) {
-                            // This now includes VSTAR cards in the priority list
-                            const img = data.data[0].images.large;
-                            targetImage.src = img;
-                            saveImageToCache(pkmn.id, img);
-                        } else {
-                            // Fallback to the latest card if no special/VSTAR versions are found
-                            fetch(`https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id}`)
-                            .then(res => res.json())
-                            .then(fallbackData => {
-                                if (fallbackData.data?.length > 0) {
-                                    const img = fallbackData.data[fallbackData.data.length - 1].images.large;
-                                    targetImage.src = img;
-                                    saveImageToCache(pkmn.id, img);
-                }
-            });
-        }
-    });
+                .then(res => res.json())
+                .then(data => {
+                    if (data.data?.length > 0) {
+                        const img = data.data[0].images.large;
+                        targetImage.src = img;
+                        saveImageToCache(pkmn.id, img);
+                    } else {
+                        fetch(`https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id}`)
+                        .then(res => res.json())
+                        .then(fallbackData => {
+                            if (fallbackData.data?.length > 0) {
+                                const img = fallbackData.data[fallbackData.data.length - 1].images.large;
+                                targetImage.src = img;
+                                saveImageToCache(pkmn.id, img);
+                            }
+                        });
+                    }
+                });
             }
         });
 
