@@ -148,16 +148,18 @@
 <body>
 
     <header>
-        <h1>Sinnoh Master Binder</h1>
-        <p class="subtitle">An automated 3x3 layout tracker managing all 107 native Generation 4 species.</p>
-        <div style="margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 15px;">
-        <div class="counter-banner" style="font-size: 1.2rem; font-weight: bold;">
+    <h1>Sinnoh Master Binder</h1>
+    <p class="subtitle">An automated layout tracker managing all 107 native Generation 4 species.</p>
+    
+    <!-- Unified Dashboard Row -->
+    <div class="dashboard-row">
+        <div class="counter-banner">
             Collected: <span id="collectionCount">0</span> / 107
         </div>
-        
-        <!-- THE CLEAR Progress BUTTON -->
-        <button onclick="clearAllProgress()" class="clear-btn">Clear Progress</button>
-        </div>
+        <button onclick="clearAllProgress()" class="clear-btn">
+            Clear Progress
+        </button>
+    </div>
     </header>
 
     <!-- The target wrapper for the loop output -->
