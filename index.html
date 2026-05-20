@@ -187,7 +187,7 @@
     <script>
     // 1. Master Sinnoh list
     const pokemonData = [
-        {"id": 387, "name": "Turtwig"}, 
+        {"id": 387, "name": "Turtwig", "other": true, "image": "https://pkmncards.com/wp-content/uploads/mebsp_en_040_std.jpg"}, 
         {"id": 388, "name": "Grotle"}, {"id": 389, "name": "Torterra"},
         {"id": 390, "name": "Chimchar"}, {"id": 391, "name": "Monferno"}, {"id": 392, "name": "Infernape"},
         {"id": 393, "name": "Piplup"}, {"id": 394, "name": "Prinplup"}, {"id": 395, "name": "Empoleon"},
@@ -258,8 +258,9 @@
         } else {
             let apiQueryUrl = `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id}`;
             
-            if (pkmn.set && pkmn.cardNum) {
-                apiQueryUrl = `https://api.pokemontcg.io/v2/cards?q=set.id:${pkmn.set} number:${pkmn.cardNum}`;
+            if (pkmn.other) {
+                const targetImage = document.getElementById(`img-${pkmn.id}`);
+                targetImage.src = pkmn.image;
             } else {
                 apiQueryUrl = `https://api.pokemontcg.io/v2/cards?q=nationalPokedexNumbers:${pkmn.id} (rarity:"Illustration Rare" OR rarity:"Special Illustration Rare" OR rarity:"Promo" OR rarity:"Rare Secret" OR rarity:"Rare Shiny" OR rarity:"Rare Holo LV.X" OR rarity:"Rare Prime")`;
             }
